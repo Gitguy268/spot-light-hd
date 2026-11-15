@@ -1,4 +1,5 @@
-// Copies dist/index.html to ./index.html and stamps it with a hash of the sources, so CI can
+// Copies dist/index.html to ./index.html and stamps it with a hash of src/, vite.config.js and the
+// runtime dependency versions, so CI can
 // tell whether the committed build is up to date (`--check`) without a byte-for-byte compare.
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
@@ -9,9 +10,13 @@ const root = join(fileURLToPath(import.meta.url), '../..');
 const files = [];
 const walk = d => readdirSync(d).sort().forEach(f => { const p = join(d, f); statSync(p).isDirectory() ? walk(p) : files.push(p); });
 walk(join(root, 'src'));
-files.push(join(root, 'package-lock.json'), join(root, 'vite.config.js'));
+files.push(join(root, 'vite.config.js'));
 const h = createHash('sha256');
 for (const f of files) { if (/\.test\.js$/.test(f)) continue; h.update(relative(root, f)); h.update(readFileSync(f)); }
+// runtime dependencies only (three.js), so bumping a dev tool doesn't make the build stale
+const lock = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'));
+const deps = Object.keys(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).dependencies || {}).sort();
+h.update(JSON.stringify(deps.map(d => [d, lock.packages?.[`node_modules/${d}`]?.version])));
 const stamp = h.digest('hex').slice(0, 16);
 const tag = `<meta name="source-hash" content="${stamp}">`;
 
