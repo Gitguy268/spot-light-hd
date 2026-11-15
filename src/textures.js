@@ -265,13 +265,28 @@ export function windowView(kind, time) {
     const snow = kind === 'cabin';
     const ground = snow ? (time === 'night' ? '#8794b0' : '#eef2f7') : (time === 'night' ? '#16241a' : '#4f7a3c');
     x.fillStyle = ground; x.fillRect(0, H * 0.68, W, H);
-    // tree line
+    // tree line, slightly out of focus
+    x.filter = 'blur(2.5px)';
     for (let i = 0; i < 26; i++) {
       const tx = r() * W, th = 60 + r() * 90, tw = 20 + r() * 26;
       x.fillStyle = snow ? (time === 'night' ? '#1c2a26' : '#2e4a3a') : (time === 'night' ? '#0e1a12' : '#2f5a2c');
       x.beginPath(); x.moveTo(tx, H * 0.7 - th); x.lineTo(tx - tw, H * 0.7); x.lineTo(tx + tw, H * 0.7); x.fill();
       if (snow) { x.fillStyle = 'rgba(255,255,255,0.85)'; x.beginPath(); x.moveTo(tx, H * 0.7 - th); x.lineTo(tx - tw * 0.35, H * 0.7 - th * 0.6); x.lineTo(tx + tw * 0.35, H * 0.7 - th * 0.6); x.fill(); }
     }
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  });
+}
+
+// A single leaf silhouette with a midrib, for alpha-tested leaf cards
+export function leafCard() {
+  return memo('leaf', () => {
+    const c = canvas(128), x = c.getContext('2d');
+    x.translate(64, 64); x.rotate(-0.6);
+    const g = x.createLinearGradient(-50, 0, 50, 0); g.addColorStop(0, '#d8e8c0'); g.addColorStop(1, '#ffffff');
+    x.fillStyle = g;
+    x.beginPath(); x.moveTo(-54, 0); x.quadraticCurveTo(0, -34, 54, 0); x.quadraticCurveTo(0, 34, -54, 0); x.fill();
+    x.strokeStyle = 'rgba(120,140,90,0.8)'; x.lineWidth = 2; x.beginPath(); x.moveTo(-54, 0); x.lineTo(50, 0); x.stroke();
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
     return t;
   });

@@ -112,7 +112,7 @@ function applyTime() {
   } else {
     scene.background = room.background;
     scene.environment = roomEnv;
-    scene.environmentIntensity = S.time === 'night' ? 0.05 : S.time === 'evening' ? 0.14 : 0.35;
+    scene.environmentIntensity = S.time === 'night' ? 0.1 : S.time === 'evening' ? 0.14 : 0.35;
   }
 }
 
@@ -129,7 +129,7 @@ function buildComposer(q) {
     gtao._overrideVisibility = () => { orig(); scene.traverse(o => { if ((o.isSprite || o.userData.noAO) && o.visible) { o.visible = false; gtao._visibilityCache.push(o); } }); };
   }
   P.bokeh = new BokehPass(scene, camera, { focus: 3, aperture: 0.004, maxblur: 0.012 }); P.bokeh.enabled = false; composer.addPass(P.bokeh);
-  if (q.bloom) { P.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.5, 0.45, 1.6); composer.addPass(P.bloom); }
+  if (q.bloom) { P.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), 0.45, 0.4, 2.4); composer.addPass(P.bloom); }
   composer.addPass(new OutputPass());
   P.grade = new ShaderPass(GradeShader); composer.addPass(P.grade);
   P.retro = new ShaderPass(RetroShader); P.retro.enabled = S.retro; composer.addPass(P.retro);
@@ -519,6 +519,6 @@ window.__spot = () => {
   return { screen, mode: game.mode, phase: game.phase, state: s.state, x: s.x, z: s.z, energy: s.energy, room: S.room, quality: level(), camera: S.camera,
     dot: { ...dot }, score: game.score, catches: game.catches, paused, photo, fps: window.__fps || 0 };
 };
-window.__spotHD = { startGame, toTitle, setRoom: (r) => { S.room = r; buildWorld(); syncTitle(); }, setQuality: (q) => { S.quality = q; buildWorld(); }, setCamera: (c) => { S.camera = c; }, setTime: (t) => { S.time = t; applyTime(); }, setPhoto, pause, endNow: () => { game.t = 1e6; }, setRetro: (on) => { S.retro = on; P.retro.enabled = on; } };
+window.__spotHD = { startGame, toTitle, setRoom: (r) => { S.room = r; buildWorld(); syncTitle(); }, setQuality: (q) => { S.quality = q; buildWorld(); }, setCamera: (c) => { S.camera = c; $('#tbCam').textContent = `Camera: ${c}`; }, setTime: (t) => { S.time = t; applyTime(); }, setPhoto, pause, endNow: () => { game.t = 1e6; }, setRetro: (on) => { S.retro = on; P.retro.enabled = on; } };
 
 boot();

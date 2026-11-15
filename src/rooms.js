@@ -112,7 +112,7 @@ function backWindow(R, c, w, y0, y1, kind) {
   const view = new THREE.Mesh(new THREE.PlaneGeometry(w * 3.2, (y1 - y0) * 3.2), new THREE.MeshBasicMaterial({ toneMapped: false }));
   view.position.set(c, (y0 + y1) / 2 + 0.2, z - 1.4); view.userData.laser = false;
   R.group.add(view);
-  R.timeHooks.push((time) => { view.material.map = T.windowView(kind, time); view.material.color.setScalar(time === 'night' ? 0.5 : time === 'evening' ? 0.9 : 1.15); view.material.needsUpdate = true; });
+  R.timeHooks.push((time) => { view.material.map = T.windowView(kind, time); view.material.color.setScalar(time === 'night' ? 0.5 : time === 'evening' ? 1.0 : 1.7); view.material.needsUpdate = true; });
   return { c, w, y0, y1 };
 }
 
@@ -151,13 +151,13 @@ function fire(R, x, y, z, scale = 1) {
     m.userData = { laser: false, ph: i * 1.7, x: (i % 3 - 1) * 0.1 * scale };
     g.add(m); flames.push(m);
   }
-  const light = new THREE.PointLight(0xff8a3a, 6 * scale, 6, 1.6);
-  light.position.set(0, 0.35 * scale, 0.15);
+  const light = new THREE.PointLight(0xff8a3a, 3.2 * scale, 6, 1.8);
+  light.position.set(0, 0.3 * scale, 0.05);
   light.castShadow = R.q.fireShadow; light.shadow.mapSize.set(512, 512); light.shadow.bias = -0.004;
   g.add(light);
   R.updaters.push((dt, t) => {
     const f = 0.75 + 0.25 * Math.sin(t * 13.1) * Math.sin(t * 7.3 + 1) + 0.1 * Math.sin(t * 29);
-    light.intensity = 6 * scale * f;
+    light.intensity = 3.2 * scale * f;
     flames.forEach((m, i) => {
       const p = m.userData, k = 0.5 + 0.5 * Math.sin(t * (6 + i) + p.ph);
       m.position.set(p.x + 0.03 * Math.sin(t * 9 + i), (0.12 + 0.12 * k + (i % 3) * 0.05) * scale, 0);
@@ -221,7 +221,7 @@ function lamp(R, x, z, h = 1.55) {
   const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 0.26, 24, 1, true), shadeMat); shade.position.set(x, h, z); R.group.add(shade);
   const light = new THREE.PointLight(0xffc98a, 0, 7, 1.7); light.position.set(x, h - 0.05, z); light.castShadow = R.q.lampShadow; light.shadow.mapSize.set(512, 512); light.shadow.bias = -0.003;
   R.group.add(light);
-  R.timeHooks.push(time => { const on = time !== 'day'; light.intensity = on ? 4.5 : 0; shadeMat.emissiveIntensity = on ? 1.4 : 0; });
+  R.timeHooks.push(time => { const on = time !== 'day'; light.intensity = on ? (time === 'night' ? 9 : 8) : 0; shadeMat.emissiveIntensity = on ? 1.4 : 0; });
   R.solid(x - 0.15, z - 0.15, x + 0.15, z + 0.15, 0.2);
 }
 
@@ -333,8 +333,8 @@ function livingRoom(q) {
   R.timeHooks.push(time => {
     const S = { day: [0xfff0d8, 3.4, [-2.2, 4.8, -7]], evening: [0xffa860, 1.6, [-5, 1.9, -6]], night: [0x9fb4ff, 0.18, [1, 5, -6]] }[time];
     sunL.color.setHex(S[0]); sunL.intensity = S[1]; sunL.position.set(...S[2]); sunL.target.position.set(0, 0, 0);
-    hemi.intensity = { day: 0.55, evening: 0.3, night: 0.08 }[time];
-    R.exposure = { day: 1.0, evening: 1.1, night: 1.35 }[time];
+    hemi.intensity = { day: 0.55, evening: 0.3, night: 0.26 }[time];
+    R.exposure = { day: 1.0, evening: 1.1, night: 1.55 }[time];
   });
   R.cams = { room: { pos: [0, 4.3, 5.3], at: [0, 0, -0.2] } };
   return R;
@@ -453,6 +453,20 @@ function tree(R, x, z) {
     const m = new THREE.Mesh(g, leafMat); m.position.set((r() - 0.5) * 1.6, (r() - 0.3) * 1.1, (r() - 0.5) * 1.6);
     m.castShadow = true; m.receiveShadow = true; crown.add(m);
   }
+  // leaf cards scattered over the crown, so its outline is leafy rather than faceted
+  const blobs = crown.children.slice();
+  blobs.forEach(b => b.scale.setScalar(0.88));
+  const n = R.q.grass ? 2600 : 900;
+  const leaves = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.16, 0.16), std({ map: T.leafCard(), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.8 }), n);
+  const o = new THREE.Object3D(), c = new THREE.Color(), dir = new THREE.Vector3();
+  for (let i = 0; i < n; i++) {
+    const b = blobs[i % blobs.length], rad = b.geometry.parameters.radius * 0.95;
+    dir.set(r() * 2 - 1, r() * 1.6 - 0.5, r() * 2 - 1).normalize();
+    o.position.copy(b.position).addScaledVector(dir, rad * (0.9 + r() * 0.25));
+    o.rotation.set(r() * 6.28, r() * 6.28, r() * 6.28); o.scale.setScalar(0.7 + r() * 0.7); o.updateMatrix();
+    leaves.setMatrixAt(i, o.matrix); leaves.setColorAt(i, c.setHSL(0.25 + r() * 0.06, 0.45, 0.28 + r() * 0.16));
+  }
+  leaves.castShadow = true; leaves.receiveShadow = true; leaves.userData.laser = false; crown.add(leaves);
   R.updaters.push((dt, t) => { crown.rotation.z = 0.015 * Math.sin(t * 0.9); crown.rotation.x = 0.01 * Math.sin(t * 0.7 + 1); });
   R.solid(x - 0.26, z - 0.26, x + 0.26, z + 0.26, 2.5);
 }
@@ -514,8 +528,8 @@ function cabin(q) {
   R.timeHooks.push(time => {
     const S = { day: [0xe8f0ff, 2.2, [-1.5, 4, -7]], evening: [0xffb27a, 0.9, [-4, 1.6, -6]], night: [0x8fa6ff, 0.15, [1, 5, -6]] }[time];
     moon.color.setHex(S[0]); moon.intensity = S[1]; moon.position.set(...S[2]); moon.target.position.set(0, 0, 0);
-    hemi.intensity = { day: 0.35, evening: 0.18, night: 0.06 }[time];
-    R.exposure = { day: 1.05, evening: 1.2, night: 1.45 }[time];
+    hemi.intensity = { day: 0.35, evening: 0.18, night: 0.1 }[time];
+    R.exposure = { day: 1.05, evening: 1.2, night: 1.6 }[time];
   });
   R.cams = { room: { pos: [0, 4.1, 5.1], at: [0, 0, -0.2] } };
   return R;

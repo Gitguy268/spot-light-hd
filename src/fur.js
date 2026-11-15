@@ -8,7 +8,7 @@ float furNoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 
 
 // size: [circumference, length] of the shape in metres, so hair density is the same everywhere.
 // rootShade: how dark the coat is at the skin (shadow between the hairs).
-export function furMesh(geometry, { color, sheen = 0x000000, length, cell, layers, size, map = null, rough = 0.55, droop = 0.3, rootShade = 0.3 }) {
+export function furMesh(geometry, { color, sheen = 0x000000, length, cell, layers, size, map = null, rough = 0.66, droop = 0.3, rootShade = 0.3 }) {
   const base = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: color, map, roughness: 0.9 }));
   base.material.color.multiplyScalar(rootShade + 0.15); // the skin under the coat is in shadow
   base.castShadow = true;
@@ -16,7 +16,7 @@ export function furMesh(geometry, { color, sheen = 0x000000, length, cell, layer
   const mat = new THREE.MeshPhysicalMaterial({
     color: color, map, roughness: rough,
     sheen: sheen ? 0.3 : 0, sheenColor: sheen, sheenRoughness: 0.5, envMapIntensity: 0.45,
-    anisotropy: sheen ? 0.6 : 0, anisotropyRotation: Math.PI / 2, // sheen stretched across the hair direction
+    anisotropy: sheen ? 0.35 : 0, anisotropyRotation: Math.PI / 2, // sheen stretched across the hair direction
   });
   mat.defines.USE_UV = '';
   mat.onBeforeCompile = (sh) => {

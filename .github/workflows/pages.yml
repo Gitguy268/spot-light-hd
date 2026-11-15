@@ -20,7 +20,7 @@ jobs:
       - name: Collect the site
         run: |
           mkdir -p /tmp/site
-          rsync -a --exclude .git --exclude .github --exclude node_modules --exclude test --exclude tests --exclude scripts --exclude package.json --exclude package-lock.json ./ /tmp/site/
+          rsync -a --exclude .git --exclude .github --exclude node_modules --exclude test --exclude tests --exclude scripts --exclude src --exclude dist --exclude package.json --exclude package-lock.json --exclude vite.config.js ./ /tmp/site/
           touch /tmp/site/.nojekyll
       - uses: actions/upload-pages-artifact@v5
         with:

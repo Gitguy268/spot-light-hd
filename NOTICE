@@ -1,8 +1,20 @@
-Spot-light is MIT licensed, see LICENSE.
+Spot-light HD is MIT licensed, see LICENSE.
 
 Third-party parts keep their own licences:
-- three.js r149 (vendor/three.min.js): MIT, see vendor/LICENSE.
-- Fonts Atkinson Hyperlegible, Lilita One and Press Start 2P, loaded from Google Fonts: SIL Open Font License 1.1.
-- Playwright (test only, not shipped): Apache-2.0.
+- three.js 0.187 and its examples (postprocessing passes, OrbitControls, RoomEnvironment, Sky,
+  RoundedBoxGeometry), bundled into index.html: MIT, Copyright 2010-2026 three.js authors.
+- The classic game in classic/ ships three.js r149 (classic/vendor/three.min.js): MIT, see
+  classic/vendor/LICENSE.
+- Fonts Atkinson Hyperlegible and Lilita One, loaded from Google Fonts: SIL Open Font License 1.1.
+- Vite, vite-plugin-singlefile (build only) and Playwright (tests only) are not shipped:
+  MIT, MIT and Apache-2.0.
 
-The portraits of Spot in docs/spot/ are AI-generated images of the author's dog, made for the author. They are not covered by the MIT licence; ask before reusing them.
+Spot's model, fur shader and gait come from spot-fetch (github.com/Gitguy268/spot-fetch), by the
+same author, MIT.
+
+The portraits of Spot in docs/spot/ are AI-generated images of the author's dog, made for the
+author. One of them is also shown as the framed photo in the game (embedded in index.html).
+They are not covered by the MIT licence; ask before reusing them.
+
+All textures are painted in code at startup and all sounds are synthesised; the game ships no
+image or audio files of its own besides the icons and that portrait.

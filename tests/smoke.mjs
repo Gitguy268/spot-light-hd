@@ -10,7 +10,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const gpu = !!process.env.GPU;
 const args = gpu ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 const browser = await chromium.launch({ args });
-const page = await browser.newPage({ viewport: { width: 1100, height: 700 }, acceptDownloads: true });
+const page = await browser.newPage({ viewport: gpu ? { width: 1100, height: 700 } : { width: 640, height: 400 }, acceptDownloads: true });
 const problems = [];
 page.on('console', m => {
   if (m.type() === 'assert' || (m.type() === 'error' && !/fonts\.(googleapis|gstatic)|ERR_INTERNET|ERR_NAME/.test(m.text()))) problems.push(`${m.type()}: ${m.text()}`);
@@ -24,12 +24,16 @@ const H = (fn, ...a) => page.evaluate(([f, x]) => window.__spotHD[f](...x), [fn,
 const state = () => page.evaluate(() => window.__spot());
 if (!gpu) await H('setQuality', 'low');
 
-const wiggle = async (n = 14) => { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; await page.mouse.move(550 + Math.cos(a) * 320, 380 + Math.sin(a * 2) * 160, { steps: 3 }); await page.waitForTimeout(gpu ? 50 : 120); } };
+const vw = gpu ? 1100 : 640, vh = gpu ? 700 : 400;
+const wiggle = async (n = gpu ? 14 : 6) => { for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; await page.mouse.move(vw / 2 + Math.cos(a) * vw * 0.3, vh * 0.55 + Math.sin(a * 2) * vh * 0.22, { steps: 2 }); await page.waitForTimeout(gpu ? 50 : 250); } };
+const log = (...a) => process.env.VERBOSE && console.log(...a);
 const modes = ['dodge', 'endless', 'lure', 'fetch', 'zoomies', 'hide', 'relax'];
 let runs = 0;
+// CI (SwiftShader) plays every mode in the living room and one in each other place
 for (const room of ['living', 'garden', 'cabin']) {
   await H('setRoom', room);
-  for (const mode of modes) {
+  for (const mode of gpu || room === 'living' ? modes : ['dodge']) {
+    log(room, mode);
     await page.click(`[data-mode="${mode}"]`);
     const a = await state();
     await wiggle();
@@ -68,7 +72,8 @@ await page.click('#pBack');
 
 // quality presets rebuild the scene without errors
 if (gpu) for (const q of ['low', 'medium', 'high', 'ultra', 'high']) { await H('setQuality', q); await wiggle(4); }
+if (gpu) await page.waitForTimeout(4000);
 const fps = (await state()).fps;
 await browser.close();
 if (problems.length) { console.error([...new Set(problems)].join('\n')); process.exit(1); }
-console.log(`ok: ${runs} runs (3 places x 7 modes), treat + result card, photo saved, cameras, 8-bit${gpu ? `, 4 quality presets, ${fps.toFixed(0)} fps` : ''}; no console errors, self-checks pass`);
+console.log(`ok: ${runs} runs (${gpu ? '3 places x 7 modes' : '7 modes + 2 places'}), treat + result card, photo saved, cameras, 8-bit${gpu ? `, 4 quality presets, ${fps.toFixed(0)} fps` : ''}; no console errors, self-checks pass`);

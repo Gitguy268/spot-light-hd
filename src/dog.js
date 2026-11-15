@@ -75,7 +75,7 @@ const WALK = { off: [0.25, 0.75, 0, 0.5], duty: 0.6 };
 const TROT = { off: [0, 0.5, 0.5, 0], duty: 0.45 };
 const GALLOP = { off: [0.55, 0.45, 0, 0.1], duty: 0.24 };
 
-export const SPOT = { coat: 0x0d0d10, sheen: 0x70747e, hair: 0.012, collar: 0xc81d1d, scale: 1 };
+export const SPOT = { coat: 0x17161b, sheen: 0x8a909e, hair: 0.016, collar: 0xc81d1d, scale: 1 };
 
 // layers: number of fur shells (quality setting). onStep(legIndex, worldPos) fires when a paw lands.
 export function createDog(cfg = SPOT, layers = 16, onStep = null) {
