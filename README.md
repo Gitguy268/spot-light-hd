@@ -20,7 +20,7 @@
 Spot is a two-year-old black lab, and he is sure the red dot is alive. This is the realistic version of [Spot-light](https://github.com/Gitguy268/spot-light): Spot has a furred coat, legs that plant on the floor, and a brain that skids on wood, loses the dot behind the sofa and barks at it on the wall. It still runs from a double-click: the whole game is one `index.html`.
 
 <!-- live-links -->
-**Live:** [gitguy268.github.io/spot-light-hd](https://gitguy268.github.io/spot-light-hd/)
+**Live:** [gitguy268.github.io/spot-light-hd](https://gitguy268.github.io/spot-light-hd/) · [spot-light-hd.vercel.app](https://spot-light-hd.vercel.app)
 <!-- /live-links -->
 
 <!-- run-steps:start -->
