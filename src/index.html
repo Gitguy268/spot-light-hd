@@ -1,0 +1,205 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT. Copyright (c) 2026 Lucas Van De Weerd. See LICENSE. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spot-light HD</title>
+<meta name="description" content="Spot, a realistic black labrador, chases the laser dot you steer across a furnished living room, a garden and a snowy cabin. Seven game modes, photo mode, synthesised sound. Runs offline from one file.">
+<meta property="og:title" content="Spot-light HD">
+<meta property="og:description" content="A realistic black lab chases your laser dot. Seven modes, three rooms, photo mode.">
+<meta property="og:image" content="https://gitguy268.github.io/spot-light-hd/docs/screenshot.jpg">
+<meta name="theme-color" content="#14110e">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #f6f1e8; --dim: #c9bfae; --panel: rgba(22, 18, 15, 0.72); --line: rgba(255, 240, 220, 0.14);
+  --collar: #d7263d; --brass: #e4b54a; --laser: #ff3030; --ok: #8fd18b;
+  --display: 'Lilita One', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --text: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #14110e; color: var(--ink); font: 16px/1.4 var(--text); }
+canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; outline: none; }
+body.title canvas#c { cursor: default; }
+button { font: inherit; color: inherit; }
+.hidden { display: none !important; }
+
+/* panels */
+.glass { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2); box-shadow: 0 12px 40px rgba(0,0,0,.35); }
+.btn { border: 1px solid var(--line); background: rgba(255,255,255,.08); border-radius: 999px; padding: .55em 1.1em; cursor: pointer; transition: background .15s, transform .15s; }
+.btn:hover, .btn:focus-visible { background: rgba(255,255,255,.18); outline: none; }
+.btn:active { transform: scale(.97); }
+.btn.primary { background: var(--collar); border-color: transparent; font-weight: 700; }
+.btn.primary:hover { background: #ec3a51; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: .45em .9em; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: #1a1512; font-weight: 700; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: .01em; margin: 0; }
+
+/* title */
+#title { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: radial-gradient(ellipse at 30% 40%, rgba(0,0,0,0) 0, rgba(0,0,0,.55) 70%); overflow-y: auto; }
+#title .card { width: min(980px, 100%); padding: 28px clamp(18px, 4vw, 40px); }
+#title h1 { font-size: clamp(42px, 7vw, 78px); line-height: 1; }
+#title h1 span { color: var(--laser); text-shadow: 0 0 18px rgba(255,40,40,.6); }
+.lede { color: var(--dim); max-width: 46em; margin: .6em 0 1.2em; }
+.modes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin: 0 0 18px; padding: 0; list-style: none; }
+.mode { text-align: left; width: 100%; height: 100%; border: 1px solid var(--line); background: rgba(255,255,255,.05); border-radius: 14px; padding: 12px 14px; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; transition: background .15s, border-color .15s; }
+.mode:hover, .mode:focus-visible { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.35); outline: none; }
+.mode .tag { flex: none; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3c4, var(--brass) 45%, #9a7420); box-shadow: inset 0 -2px 4px rgba(0,0,0,.35); display: grid; place-items: center; font: 15px var(--display); color: #4a3510; }
+.mode b { font: 20px var(--display); font-weight: 400; display: block; }
+.mode small { color: var(--dim); font-size: 13.5px; }
+.mode .best { color: var(--brass); font-size: 12.5px; display: block; margin-top: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.row label { color: var(--dim); font-size: 14px; margin-right: 4px; }
+.foot { margin-top: 16px; color: var(--dim); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; }
+.foot a { color: var(--ink); }
+
+/* in-game HUD */
+#hud { position: fixed; top: max(14px, env(safe-area-inset-top)); right: 16px; text-align: right; pointer-events: none; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
+#hudMain { font: clamp(26px, 4vw, 40px) var(--display); }
+#hudSub { color: var(--dim); font-size: 15px; }
+#spotPanel { position: fixed; top: max(14px, env(safe-area-inset-top)); left: 16px; padding: 10px 14px; width: 230px; pointer-events: none; }
+#spotPanel .name { font: 20px var(--display); display: flex; justify-content: space-between; align-items: baseline; }
+#spotPanel .name small { font: 13px var(--text); color: var(--dim); }
+.meter { height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); margin-top: 7px; overflow: hidden; }
+.meter i { display: block; height: 100%; width: 50%; border-radius: 3px; transition: width .3s; }
+.meter.energy i { background: linear-gradient(90deg, #e9a23b, #8fd18b); }
+.meter.happy i { background: linear-gradient(90deg, #a46be0, #ff6b8a); }
+.meters { font-size: 11.5px; color: var(--dim); display: grid; grid-template-columns: auto 1fr; gap: 0 8px; align-items: center; margin-top: 4px; }
+.meters .meter { margin-top: 0; }
+#toolbar { position: fixed; left: 16px; bottom: max(14px, env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px; max-width: calc(100vw - 32px); }
+#toolbar .btn { padding: .4em .85em; font-size: 14px; }
+#toolbar .keys { font-size: 12.5px; color: var(--dim); padding: 0 6px; }
+#fps { position: fixed; right: 16px; bottom: 14px; font: 12px ui-monospace, monospace; color: var(--dim); pointer-events: none; }
+#toast { position: fixed; left: 50%; top: 18%; transform: translate(-50%, -10px); font: clamp(24px, 4vw, 36px) var(--display); color: var(--ink); text-shadow: 0 3px 16px rgba(0,0,0,.7); opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; white-space: nowrap; }
+#toast.on { opacity: 1; transform: translate(-50%, 0); }
+#achieve { position: fixed; right: 16px; top: 90px; padding: 10px 14px 10px 12px; display: flex; gap: 10px; align-items: center; transform: translateX(120%); transition: transform .35s cubic-bezier(.2,.9,.3,1.2); max-width: 300px; }
+#achieve.on { transform: none; }
+#achieve .tag { width: 30px; height: 30px; flex: none; }
+#achieve b { display: block; font: 17px var(--display); font-weight: 400; }
+#achieve small { color: var(--dim); }
+
+/* dialogs */
+.dialog { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0,0,0,.35); }
+.dialog .card { width: min(560px, 100%); padding: 24px; max-height: calc(100vh - 32px); overflow-y: auto; }
+.dialog h2 { font-size: 32px; margin-bottom: .2em; }
+.dialog p { color: var(--dim); }
+.dialog .best { color: var(--brass); }
+.grid2 { display: grid; grid-template-columns: max-content 1fr; gap: 12px 16px; align-items: center; margin: 14px 0 18px; }
+.grid2 > label { color: var(--dim); font-size: 14px; }
+input[type=range] { width: 100%; accent-color: var(--collar); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+.stats div { background: rgba(255,255,255,.06); border-radius: 12px; padding: 10px; }
+.stats b { display: block; font: 24px var(--display); font-weight: 400; }
+.stats small { color: var(--dim); font-size: 12.5px; }
+.ach { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.ach div { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.05); font-size: 13px; color: var(--dim); opacity: .55; }
+.ach div.got { opacity: 1; background: rgba(228,181,74,.16); color: var(--ink); }
+.ach b { display: block; font-weight: 700; color: var(--ink); }
+
+/* photo mode */
+#photoBar { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: center; width: min(760px, calc(100vw - 32px)); }
+#photoBar label { color: var(--dim); font-size: 13px; display: flex; gap: 8px; align-items: center; }
+#photoBar input[type=range] { width: 110px; }
+
+/* loading */
+#loading { position: fixed; inset: 0; display: grid; place-items: center; background: #14110e; z-index: 10; transition: opacity .5s; }
+#loading.done { opacity: 0; pointer-events: none; }
+#loading .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--laser); box-shadow: 0 0 22px 6px rgba(255,40,40,.55); margin: 0 auto 16px; animation: wander 1.6s ease-in-out infinite; }
+#loading p { color: var(--dim); text-align: center; margin: 0; }
+@keyframes wander { 0%,100% { transform: translate(-40px, 0); } 50% { transform: translate(40px, -10px); } }
+#nogl { max-width: 30em; text-align: center; }
+
+body.title #hud, body.title #spotPanel, body.title #toolbar, body.photo #hud, body.photo #spotPanel, body.photo #toolbar { display: none; }
+@media (max-width: 640px) {
+  #spotPanel { width: 170px; padding: 8px 10px; }
+  #toolbar .keys { display: none; }
+  #title .card { padding: 20px 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body class="title">
+<canvas id="c" tabindex="0" aria-label="The game: Spot and the laser dot"></canvas>
+
+<div id="loading"><div><div class="dot"></div><p id="loadText">Brushing Spot's coat…</p></div></div>
+
+<section id="title" aria-labelledby="t">
+  <div class="card glass">
+    <h1 id="t">Spot-light <span>HD</span></h1>
+    <p class="lede">Spot is a two-year-old black lab, and he is sure the red dot is alive. Your mouse, finger or gamepad is the laser pointer. Pick a game:</p>
+    <ul class="modes" id="modes"></ul>
+    <div class="row">
+      <span><label>Place</label><span class="seg" id="roomSeg"></span></span>
+      <span><label>Time</label><span class="seg" id="timeSeg"></span></span>
+    </div>
+    <div class="foot">
+      <span class="row"><button class="btn" id="openSettings">Settings</button><button class="btn" id="openStats">Stats &amp; achievements</button></span>
+      <span>Mouse or finger moves the dot · right-click or Space turns it off · <a href="classic/index.html">Classic Spot-light</a></span>
+    </div>
+  </div>
+</section>
+
+<div id="hud" hidden><div id="hudMain"></div><div id="hudSub"></div></div>
+<div id="spotPanel" class="glass" hidden>
+  <div class="name">Spot <small id="spotState">chasing the dot</small></div>
+  <div class="meters"><span>energy</span><div class="meter energy"><i id="energyBar"></i></div><span>happy</span><div class="meter happy"><i id="happyBar"></i></div></div>
+</div>
+<div id="toolbar" class="glass" hidden>
+  <button class="btn" id="tbPause" title="Pause (Esc)">Pause</button>
+  <button class="btn" id="tbLaser" title="Laser on or off (Space or right-click)">Laser off</button>
+  <button class="btn" id="tbCam" title="Camera (C)">Camera: room</button>
+  <button class="btn" id="tbPhoto" title="Photo mode (P)">Photo</button>
+  <button class="btn" id="tbSound" title="Sound (M)">Sound on</button>
+  <span class="keys">C camera · B 8-bit · T time · P photo · Esc pause</span>
+</div>
+<div id="fps" hidden></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="achieve" class="glass" role="status" aria-live="polite"><span class="tag mode"><span class="tag">★</span></span><div><b id="achTitle"></b><small id="achText"></small></div></div>
+
+<section id="pause" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="pt">
+  <div class="card glass"><h2 id="pt">Paused</h2><p id="pauseText">Spot is waiting for the dot to come back.</p>
+    <div class="row"><button class="btn primary" id="resume">Resume</button><button class="btn" id="restart">Restart</button><button class="btn" data-act="title">Pick another game</button></div></div>
+</section>
+<section id="over" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="overTitle">
+  <div class="card glass"><h2 id="overTitle"></h2><p id="overText"></p><p class="best" id="overBest"></p>
+    <div class="row"><button class="btn primary" id="again">Play again</button><button class="btn" data-act="title">Pick another game</button></div></div>
+</section>
+<section id="settings" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="st">
+  <div class="card glass"><h2 id="st">Settings</h2>
+    <div class="grid2">
+      <label for="sQuality">Quality</label><select id="sQuality" class="btn"><option value="auto">Auto (by frame rate)</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="ultra">Ultra</option></select>
+      <label>Camera</label><span class="seg" id="camSeg"></span>
+      <label>Weather</label><span class="seg" id="weatherSeg"></span>
+      <label>Spot's pace</label><span class="seg" id="paceSeg"></span>
+      <label>Laser colour</label><span class="seg" id="laserSeg"></span>
+      <label for="sSteady">Steady hand</label><input type="range" id="sSteady" min="0" max="1" step="0.05">
+      <label for="sVolume">Volume</label><input type="range" id="sVolume" min="0" max="1" step="0.05">
+      <label>8-bit look</label><span class="seg" id="retroSeg"></span>
+      <label>Reduce motion</label><span class="seg" id="motionSeg"></span>
+      <label>Frame rate</label><span class="seg" id="fpsSeg"></span>
+    </div>
+    <p style="font-size:13px">Dogs see red poorly: Spot follows the dot by its movement and brightness. Weather changes the garden only. Settings are saved in this browser.</p>
+    <div class="row"><button class="btn primary" data-close>Done</button></div></div>
+</section>
+<section id="statsDlg" class="dialog hidden" role="dialog" aria-modal="true" aria-labelledby="sst">
+  <div class="card glass"><h2 id="sst">Stats</h2><div class="stats" id="statsGrid"></div><h3>Achievements</h3><div class="ach" id="achGrid" style="margin:10px 0 18px"></div>
+    <div class="row"><button class="btn primary" data-close>Done</button></div></div>
+</section>
+<div id="photoBar" class="glass hidden">
+  <span class="seg" id="filterSeg"></span>
+  <label>Blur <input type="range" id="pAperture" min="0" max="1" step="0.02" value="0.4"></label>
+  <label>Exposure <input type="range" id="pExposure" min="-1" max="1" step="0.05" value="0"></label>
+  <button class="btn primary" id="pSave">Save photo</button>
+  <button class="btn" id="pBack">Back</button>
+</div>
+<script type="module" src="./main.js"></script>
+</body>
+</html>

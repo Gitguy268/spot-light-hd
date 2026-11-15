@@ -1,0 +1,800 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT. Copyright (c) 2026 Lucas Van De Weerd. See LICENSE. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spot-light</title>
+<meta name="description" content="Spot, a black labrador, chases the laser dot you steer with your mouse. Three game modes, 2D or 3D, normal or 8-bit. Runs offline from one file.">
+<meta property="og:title" content="Spot-light">
+<meta property="og:description" content="A black lab chases a laser dot in 2D, 3D or 8-bit.">
+<meta property="og:image" content="https://gitguy268.github.io/spot-light/docs/screenshot.jpg">
+<meta name="theme-color" content="#1C1B20">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lilita+One&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root {
+  --oak: #C8925A;
+  --rug: #2F6F73;
+  --wall: #8FA9C4;
+  --lab: #1C1B20;
+  --sheen: #4A4F5C;
+  --collar: #D7263D;
+  --laser: #FF2A2A;
+  --paper: #F4F4F0;
+  --brass: #E6C229;
+  --silver: #C9C9C2;
+  --display: "Lilita One", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --text: "Atkinson Hyperlegible", system-ui, sans-serif;
+  --round: 999px;
+}
+body.bit {
+  --display: "Press Start 2P", ui-monospace, monospace;
+  --text: "Press Start 2P", ui-monospace, monospace;
+  --round: 0;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body { background: var(--wall); color: var(--lab); font: 18px/1.45 var(--text); }
+body.playing { cursor: none; }
+canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+body.bit canvas { image-rendering: pixelated; }
+#c3, body.three #c2 { display: none; }
+body.three #c3 { display: block; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+:focus-visible { outline: 3px solid var(--collar); outline-offset: 3px; }
+
+/* Title: the live room stays visible on the right */
+.screen { position: fixed; inset: 0; display: none; cursor: auto; padding: 16px; }
+.screen.on { display: flex; }
+#title {
+  align-items: flex-start; padding: clamp(16px, 6vh, 72px) clamp(16px, 6vw, 88px);
+  background: linear-gradient(90deg, rgb(143 169 196 / .94) 0, rgb(143 169 196 / .8) 40%, rgb(143 169 196 / 0) 72%);
+  pointer-events: none;
+}
+#title > * { pointer-events: auto; }
+h1 {
+  font: 400 clamp(64px, 11vw, 148px)/.86 var(--display); margin: 0; letter-spacing: -.01em;
+  color: var(--lab); text-shadow: .03em .05em 0 var(--paper);
+}
+body.bit h1 { font-size: clamp(30px, 5.5vw, 68px); line-height: 1.1; text-shadow: 4px 4px 0 var(--paper); }
+.lede { max-width: 32ch; margin: 18px 0 30px; font-size: 20px; }
+body.bit .lede { font-size: 12px; line-height: 2; }
+
+/* The mode picker is Spot's collar with three tags */
+.collar { position: relative; width: min(560px, 100%); }
+.strap {
+  height: 24px; border-radius: var(--round); background: var(--collar);
+  box-shadow: inset 0 -4px 0 rgb(0 0 0 / .18);
+  background-image: linear-gradient(90deg, rgb(255 255 255 / .45) 50%, transparent 0);
+  background-size: 14px 2px; background-repeat: repeat-x; background-position: 0 6px;
+}
+.tags { list-style: none; margin: 0; padding: 0 8px; display: flex; justify-content: space-around; gap: 12px; }
+.tags li { display: flex; flex-direction: column; align-items: center; width: 33%; text-align: center; }
+.tags li::before { content: ""; width: 14px; height: 18px; margin-top: -6px; border: 3px solid var(--sheen); border-radius: var(--round); }
+.tag { width: 108px; height: 108px; margin-top: -6px; padding: 0; border: 0; background: none; border-radius: 50%; }
+/* the face swings, the button stays put so a click never slips off it */
+.tag span {
+  display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%;
+  border: 3px solid rgb(0 0 0 / .25); transform-origin: 50% -12px;
+  font: 400 22px var(--display); color: #4a3d0c;
+  text-shadow: 0 1px 0 rgb(255 255 255 / .55);
+  background: radial-gradient(circle at 35% 30%, #fff6c9 0, var(--brass) 45%, #b39114 100%);
+}
+.tag.silver span { color: #3a3a36; background: radial-gradient(circle at 35% 30%, #fff 0, var(--silver) 45%, #8e8e86 100%); }
+body.bit .tag, body.bit .tag span { border-radius: 0; }
+body.bit .tag span { font-size: 12px; }
+@media (prefers-reduced-motion: no-preference) {
+  .tag:hover span, .tag:focus-visible span { animation: swing .7s ease-out; }
+}
+@keyframes swing { 25% { transform: rotate(9deg); } 55% { transform: rotate(-6deg); } 80% { transform: rotate(2deg); } }
+.tags p { margin: 10px 0 0; font-size: 15px; line-height: 1.35; max-width: 17ch; }
+body.bit .tags p { font-size: 9px; line-height: 1.8; }
+
+/* In-game */
+#hud { position: fixed; top: 16px; right: 20px; text-align: right; pointer-events: none; }
+#hudMain { font: 400 48px/1 var(--display); text-shadow: 2px 2px 0 var(--paper); }
+#hudSub { margin-top: 6px; font-weight: 700; font-size: 16px; color: var(--lab); }
+body.bit #hudMain { font-size: 22px; }
+body.bit #hudSub { font-size: 10px; line-height: 2; }
+#hudSub svg { fill: var(--lab); margin-left: 4px; }
+#hudSub svg.gone { opacity: .2; }
+#toast {
+  position: fixed; top: 16%; left: 0; right: 0; text-align: center; pointer-events: none;
+  font: 400 44px var(--display); color: var(--collar); text-shadow: 2px 2px 0 var(--paper), -2px -2px 0 var(--paper);
+  opacity: 0; transition: opacity .25s;
+}
+#toast.on { opacity: 1; transition: none; }
+body.bit #toast { font-size: 20px; }
+
+#switches { position: fixed; left: 16px; bottom: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; cursor: auto; }
+.seg { display: inline-flex; padding: 4px; border-radius: var(--round); background: rgb(28 27 32 / .88); }
+.seg button { border: 0; background: none; color: var(--paper); font-weight: 700; font-size: 15px; padding: 7px 14px; border-radius: var(--round); }
+.seg button[aria-pressed="true"] { background: var(--paper); color: var(--lab); }
+body.bit .seg button { font-size: 10px; }
+.keys { margin: 0; font-size: 14px; font-weight: 700; }
+body.bit .keys { font-size: 8px; }
+
+#pause, #over { align-items: center; justify-content: center; background: rgb(143 169 196 / .6); }
+.panel {
+  max-width: 460px; padding: 28px 32px; background: var(--paper);
+  border: 3px solid var(--lab); border-radius: 22px; box-shadow: 0 8px 0 var(--lab);
+}
+body.bit .panel { border-radius: 0; }
+.panel h2 { font: 400 40px/1.05 var(--display); margin: 0 0 10px; }
+body.bit .panel h2 { font-size: 20px; line-height: 1.4; }
+body.bit .panel p { font-size: 11px; line-height: 2; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.btn { border: 3px solid var(--lab); background: var(--lab); color: var(--paper); font-weight: 700; padding: 10px 20px; border-radius: var(--round); }
+.btn.ghost { background: none; color: var(--lab); }
+body.bit .btn { font-size: 11px; }
+
+@media (max-width: 640px) {
+  #title { background: rgb(143 169 196 / .9); }
+  .tag { width: 84px; height: 84px; }
+  .tag span { font-size: 18px; }
+  .tags p { font-size: 13px; }
+  #hudMain { font-size: 34px; }
+}
+</style>
+</head>
+<body>
+<canvas id="c2" aria-hidden="true"></canvas>
+<canvas id="c3" aria-hidden="true"></canvas>
+
+<section id="title" class="screen on" aria-labelledby="t">
+  <div>
+    <h1 id="t">Spot-light</h1>
+    <p class="lede">Spot is a two-year-old black lab who is sure the red dot is alive. Your mouse is the laser pointer.</p>
+    <div class="collar" role="group" aria-label="Pick a game">
+      <div class="strap"></div>
+      <ul class="tags">
+        <li><button class="tag" data-mode="dodge"><span>Dodge</span></button><p>60 seconds, 3 lives. Keep the dot out of his paws.</p></li>
+        <li><button class="tag silver" data-mode="endless"><span>Endless</span></button><p>No clock. Count how often he gets it.</p></li>
+        <li><button class="tag" data-mode="lure"><span>Lure</span></button><p>Steer him into the cup, the sock and the ball.</p></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<div id="hud" hidden><div id="hudMain"></div><div id="hudSub"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div id="switches">
+  <div class="seg" role="group" aria-label="View">
+    <button data-view="2d" aria-pressed="true">2D</button><button data-view="3d" aria-pressed="false">3D</button>
+  </div>
+  <div class="seg" role="group" aria-label="Style">
+    <button data-bit="0" aria-pressed="true">Normal</button><button data-bit="1" aria-pressed="false">8-bit</button>
+  </div>
+  <p class="keys">V and B switch, Esc pauses</p>
+</div>
+
+<section id="pause" class="screen" role="dialog" aria-modal="true" aria-labelledby="pt">
+  <div class="panel">
+    <h2 id="pt">Paused</h2>
+    <p id="pauseText"></p>
+    <div class="row"><button class="btn" id="resume">Resume</button><button class="btn ghost" data-act="title">Pick another game</button></div>
+  </div>
+</section>
+<section id="over" class="screen" role="dialog" aria-modal="true" aria-labelledby="overTitle">
+  <div class="panel">
+    <h2 id="overTitle"></h2>
+    <p id="overText"></p>
+    <div class="row"><button class="btn" id="again">Play again</button><button class="btn ghost" data-act="title">Pick another game</button></div>
+  </div>
+</section>
+
+<script src="vendor/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+
+// Room in metres: x across, z depth; origin in the middle of the floor
+const W = 8, D = 5, HW = W / 2, HD = D / 2;
+const PAL = {
+  lab: '#1C1B20', sheen: '#4A4F5C', wall: '#8FA9C4', oak: '#C8925A', oakDark: '#9A6A3C', oakLight: '#E2B57F',
+  rug: '#2F6F73', rugLight: '#4F9A9A', collar: '#D7263D', laser: '#FF2A2A', laserCore: '#FFD0D0',
+  paper: '#F4F4F0', grey: '#C9C9C2', brass: '#E6C229', ball: '#C8E04A', brown: '#3B2A20',
+};
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const dist = (ax, az, bx, bz) => Math.hypot(ax - bx, az - bz);
+const angDiff = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; return d; };
+
+// ---------- Spot ----------
+const REACH = 0.55;      // body centre to front paws
+const PAW_R = 0.42;      // how close the paws must land to count as a catch
+const CROUCH_T = 0.45, POUNCE_T = 0.35, LAND_T = 0.6;
+
+function newSpot() {
+  return { x: -2.4, z: 0.6, h: 0, state: 'chase', t: 0, fx: 0, fz: 0, tx: 0, tz: 0,
+           hop: 0, ext: 0, still: 0, lx: 0, lz: 0, wag: 0, gait: 0 };
+}
+const go = (s, state) => { s.state = state; s.t = 0; };
+
+// Chase -> crouch (butt wiggle) -> pounce at where the dot was -> land. Returns 'catch' | 'miss' | null.
+function stepSpot(s, L, dt, speed) {
+  let ev = null;
+  s.t += dt;
+  s.wag += dt * (s.state === 'sit' ? 5 : 13);
+  s.still = dist(L.x, L.z, s.lx, s.lz) < 0.005 ? s.still + dt : 0;
+  s.lx = L.x; s.lz = L.z;
+  const d = dist(s.x, s.z, L.x, L.z);
+  const want = Math.atan2(L.z - s.z, L.x - s.x);
+  const turn = rate => { s.h += clamp(angDiff(s.h, want), -rate * dt, rate * dt); };
+  const facing = Math.abs(angDiff(s.h, want)) < 0.5;
+
+  switch (s.state) {
+    case 'chase': {
+      turn(7 * speed);
+      const v = 2.4 * speed * clamp((d - 0.4) / 1.2, 0, 1) * (facing ? 1 : 0.45);
+      s.x += Math.cos(s.h) * v * dt; s.z += Math.sin(s.h) * v * dt;
+      s.gait += v * dt * 9;
+      if (s.still > 2.5 && d > 1.6) go(s, 'sit');            // bored of a dot that doesn't move
+      else if (d < 1.5 && facing) go(s, 'crouch');
+      break;
+    }
+    case 'sit':
+      if (s.still === 0 || s.t > 1.6) go(s, 'chase');
+      break;
+    case 'crouch':
+      turn(5 * speed);
+      if (s.t > CROUCH_T / speed) {
+        const lunge = clamp(d - REACH, 0, 1.7);
+        s.fx = s.x; s.fz = s.z;
+        s.tx = s.x + Math.cos(s.h) * lunge; s.tz = s.z + Math.sin(s.h) * lunge;
+        go(s, 'pounce');
+      }
+      break;
+    case 'pounce': {
+      const p = Math.min(1, s.t / POUNCE_T), e = 1 - (1 - p) * (1 - p);
+      s.x = s.fx + (s.tx - s.fx) * e; s.z = s.fz + (s.tz - s.fz) * e;
+      s.hop = Math.sin(Math.PI * p); s.ext = p;
+      if (p >= 1) {
+        s.hop = 0;
+        const px = s.x + Math.cos(s.h) * REACH, pz = s.z + Math.sin(s.h) * REACH;
+        ev = dist(px, pz, L.x, L.z) < PAW_R ? 'catch' : 'miss';
+        go(s, 'land');
+      }
+      break;
+    }
+    case 'land':
+      s.ext = Math.max(0, 1 - s.t / 0.4);
+      if (s.t > LAND_T) go(s, 'chase');
+      break;
+  }
+  s.x = clamp(s.x, -HW + 0.45, HW - 0.45);
+  s.z = clamp(s.z, -HD + 0.35, HD - 0.35);
+  return ev;
+}
+
+// ---------- 2D renderer ----------
+const c2 = $('#c2'), x2 = c2.getContext('2d');
+const V = { ox: 0, oy: 0, k: 1 };
+const view2d = {
+  layout(w, h) {
+    const m = Math.max(16, Math.min(w, h) * 0.05);
+    V.k = Math.min((w - 2 * m) / (W + 0.4), (h - 2 * m - 48) / (D + 0.4));
+    V.ox = w / 2; V.oy = h / 2;
+  },
+  toRoom: p => ({ x: (p.x - V.ox) / V.k, z: (p.y - V.oy) / V.k }),
+  toScreen: (x, z) => ({ x: V.ox + x * V.k, y: V.oy + z * V.k }),
+};
+
+function seeded(seed) { return () => (seed = (seed * 16807) % 2147483647) / 2147483647; }
+function floorCanvas() {
+  const c = document.createElement('canvas'); c.width = 800; c.height = 500;   // 100 px per metre
+  const g = c.getContext('2d'), rnd = seeded(11);
+  g.fillStyle = PAL.oak; g.fillRect(0, 0, 800, 500);
+  for (let y = 0; y < 500; y += 25) {
+    for (let x = -rnd() * 160; x < 800;) {
+      const len = 120 + rnd() * 140;
+      g.globalAlpha = 0.18 + rnd() * 0.25;
+      g.fillStyle = rnd() < 0.5 ? PAL.oakLight : PAL.oakDark; g.fillRect(x, y, len, 25);
+      g.globalAlpha = 1; g.fillStyle = PAL.oakDark; g.fillRect(x, y, 2, 25);
+      x += len;
+    }
+    g.fillStyle = PAL.oakDark; g.fillRect(0, y, 800, 2);
+  }
+  return c;
+}
+function rugCanvas() {
+  const c = document.createElement('canvas'); c.width = 460; c.height = 260;
+  const g = c.getContext('2d');
+  g.strokeStyle = PAL.paper; g.lineWidth = 2;
+  for (let y = 6; y < 256; y += 8) { g.beginPath(); g.moveTo(0, y); g.lineTo(22, y); g.moveTo(438, y); g.lineTo(460, y); g.stroke(); }
+  g.fillStyle = PAL.rug; g.fillRect(20, 0, 420, 260);
+  g.strokeStyle = PAL.rugLight; g.lineWidth = 10; g.strokeRect(40, 20, 380, 220);
+  g.lineWidth = 3; g.strokeRect(58, 38, 344, 184);
+  g.fillStyle = PAL.rugLight;
+  for (const [cx, cy] of [[230, 130], [140, 130], [320, 130]]) {
+    g.beginPath(); g.moveTo(cx, cy - 34); g.lineTo(cx + 26, cy); g.lineTo(cx, cy + 34); g.lineTo(cx - 26, cy); g.fill();
+  }
+  return c;
+}
+const FLOOR = floorCanvas(), RUG = rugCanvas();
+
+function ellipse(c, x, y, rx, ry, rot, fill) {
+  c.beginPath(); c.ellipse(x, y, rx, ry, rot || 0, 0, Math.PI * 2); c.fillStyle = fill; c.fill();
+}
+
+function drawSpot2d(c, s) {
+  const sit = s.state === 'sit', crouch = s.state === 'crouch';
+  c.save(); c.translate(s.x, s.z); c.rotate(s.h);
+  ellipse(c, 0.06 + s.hop * 0.18, 0.08 + s.hop * 0.18, 0.6, 0.28, 0, 'rgba(60,35,15,.28)');   // shadow
+  const sc = 1 + s.hop * 0.2; c.scale(sc, sc);
+  const wig = crouch ? Math.sin(s.t * 32) * 0.05 : 0;
+  const step = s.state === 'chase' ? Math.sin(s.gait) * 0.06 : 0;
+  // tail
+  const tb = sit ? -0.38 : -0.46;
+  c.beginPath(); c.moveTo(tb, wig);
+  c.quadraticCurveTo(tb - 0.2, wig + Math.sin(s.wag) * 0.08, tb - 0.36, wig + Math.sin(s.wag - 0.8) * 0.2);
+  c.strokeStyle = PAL.lab; c.lineWidth = 0.075; c.lineCap = 'round'; c.stroke();
+  // paws
+  const fx = 0.3 + s.ext * 0.32 - (crouch ? 0.06 : 0);
+  ellipse(c, fx + step, -0.14, 0.085, 0.06, 0, PAL.lab);
+  ellipse(c, fx - step, 0.14, 0.085, 0.06, 0, PAL.lab);
+  ellipse(c, (sit ? -0.18 : -0.32) - step, -0.17 + wig, 0.09, 0.065, 0, PAL.lab);
+  ellipse(c, (sit ? -0.18 : -0.32) + step, 0.17 + wig, 0.09, 0.065, 0, PAL.lab);
+  // body + coat sheen
+  if (sit) ellipse(c, -0.04, 0, 0.36, 0.22, 0, PAL.lab);
+  else { c.save(); c.translate(0, wig * 0.5); c.rotate(wig); ellipse(c, crouch ? -0.04 : 0, 0, 0.46, 0.21, 0, PAL.lab); c.restore(); }
+  ellipse(c, -0.06, wig * 0.5, sit ? 0.22 : 0.3, 0.05, 0, PAL.sheen);
+  // collar and tag
+  c.fillStyle = PAL.collar; c.beginPath(); c.roundRect(0.28, -0.155, 0.075, 0.31, 0.03); c.fill();
+  ellipse(c, 0.33, 0.19, 0.04, 0.04, 0, PAL.brass);
+  // head
+  const hx = 0.52 + (crouch ? -0.04 : 0);
+  ellipse(c, hx - 0.05, -0.15 - s.hop * 0.04, 0.1, 0.06, -0.5 - s.hop * 0.5, '#111014');   // ears
+  ellipse(c, hx - 0.05, 0.15 + s.hop * 0.04, 0.1, 0.06, 0.5 + s.hop * 0.5, '#111014');
+  ellipse(c, hx, 0, 0.165, 0.16, 0, PAL.lab);
+  ellipse(c, hx + 0.18, 0, 0.11, 0.08, 0, PAL.lab);
+  ellipse(c, hx + 0.27, 0, 0.035, 0.045, 0, '#000');
+  ellipse(c, hx + 0.03, 0, 0.12, 0.035, 0, PAL.sheen);
+  ellipse(c, hx + 0.08, -0.075, 0.022, 0.022, 0, PAL.brown);
+  ellipse(c, hx + 0.08, 0.075, 0.022, 0.022, 0, PAL.brown);
+  ellipse(c, hx + 0.088, -0.08, 0.008, 0.008, 0, PAL.paper);
+  ellipse(c, hx + 0.088, 0.07, 0.008, 0.008, 0, PAL.paper);
+  c.restore();
+}
+
+function drawItem2d(c, it) {
+  c.save(); c.translate(it.x, it.z); c.rotate(it.rot);
+  if (it.kind === 'cup') {
+    if (it.down) {
+      ellipse(c, 0.16, 0.02, 0.22, 0.13, 0.3, PAL.brown);          // spilled coffee
+      c.fillStyle = PAL.paper; c.beginPath(); c.roundRect(-0.07, -0.06, 0.16, 0.12, 0.03); c.fill();
+      ellipse(c, 0.09, 0, 0.02, 0.06, 0, PAL.grey);
+    } else {
+      c.beginPath(); c.arc(0.1, 0, 0.04, 0, Math.PI * 2); c.strokeStyle = PAL.paper; c.lineWidth = 0.025; c.stroke();
+      ellipse(c, 0, 0, 0.09, 0.09, 0, PAL.paper);
+      ellipse(c, 0, 0, 0.068, 0.068, 0, PAL.brown);
+    }
+  } else if (it.kind === 'sock') {
+    c.fillStyle = PAL.grey; c.beginPath(); c.roundRect(-0.16, -0.05, 0.24, 0.1, 0.05); c.fill();
+    ellipse(c, 0.1, 0.04, 0.07, 0.06, 0, PAL.grey);
+    c.fillStyle = PAL.collar; c.fillRect(-0.12, -0.05, 0.03, 0.1); c.fillRect(-0.07, -0.05, 0.03, 0.1);
+  } else {
+    ellipse(c, 0, 0, 0.075, 0.075, 0, PAL.ball);
+    c.beginPath(); c.arc(-0.09, 0, 0.07, -0.9, 0.9); c.strokeStyle = PAL.paper; c.lineWidth = 0.015; c.stroke();
+  }
+  c.restore();
+}
+
+function drawLaser2d(c, L, bit) {
+  if (bit) {
+    ellipse(c, L.x, L.z, 0.11, 0.11, 0, PAL.laser);
+    ellipse(c, L.x, L.z, 0.045, 0.045, 0, PAL.laserCore);
+    return;
+  }
+  const g = c.createRadialGradient(L.x, L.z, 0, L.x, L.z, 0.35);
+  g.addColorStop(0, 'rgba(255,42,42,.55)'); g.addColorStop(1, 'rgba(255,42,42,0)');
+  ellipse(c, L.x, L.z, 0.35, 0.35, 0, g);
+  ellipse(c, L.x, L.z, 0.045, 0.045, 0, PAL.laser);
+  ellipse(c, L.x, L.z, 0.02, 0.02, 0, PAL.laserCore);
+}
+
+const PAL_RGB = Object.values(PAL).map(h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)));
+const qcache = new Int16Array(32768).fill(-1);
+function quantize() {   // snap every pixel to the 16-colour palette
+  const img = x2.getImageData(0, 0, c2.width, c2.height), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const key = (d[i] >> 3) << 10 | (d[i + 1] >> 3) << 5 | d[i + 2] >> 3;
+    let best = qcache[key];
+    if (best < 0) {
+      let bd = 1e9;
+      PAL_RGB.forEach(([r, g, b], j) => { const e = (r - d[i]) ** 2 + (g - d[i + 1]) ** 2 + (b - d[i + 2]) ** 2; if (e < bd) { bd = e; best = j; } });
+      qcache[key] = best;
+    }
+    const p = PAL_RGB[best]; d[i] = p[0]; d[i + 1] = p[1]; d[i + 2] = p[2];
+  }
+  x2.putImageData(img, 0, 0);
+}
+
+function resize2d() {
+  const w = innerWidth, h = innerHeight, res = bit ? 1 / 5 : devicePixelRatio || 1;
+  c2.width = Math.max(1, Math.round(w * res)); c2.height = Math.max(1, Math.round(h * res));
+  view2d.layout(w, h);
+}
+
+function draw2d() {
+  const c = x2, w = innerWidth, h = innerHeight;
+  c.setTransform(c2.width / w, 0, 0, c2.height / h, 0, 0);
+  c.imageSmoothingEnabled = !bit;
+  c.fillStyle = PAL.wall; c.fillRect(0, 0, w, h);
+  c.translate(V.ox, V.oy); c.scale(V.k, V.k);
+  c.fillStyle = PAL.paper; c.fillRect(-HW - 0.1, -HD - 0.1, W + 0.2, D + 0.2);   // skirting board
+  c.drawImage(FLOOR, -HW, -HD, W, D);
+  c.drawImage(RUG, -2.3, -1.3, 4.6, 2.6);
+  for (const it of items) drawItem2d(c, it);
+  drawSpot2d(c, spot);
+  drawLaser2d(c, laser, bit);
+  if (bit) quantize();
+}
+
+// ---------- 3D renderer (three.js) ----------
+const c3 = $('#c3');
+let T = null;
+const mats = [];
+function mat(color, extra) { const m = new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.7 }, extra)); mats.push(m); return m; }
+function mesh(geo, m, parent, x = 0, y = 0, z = 0) {
+  const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; parent.add(o); return o;
+}
+function pivot(parent, x, y, z) { const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g); return g; }
+
+function buildSpot3d(scene) {
+  const coat = mat('#0c0b0e', { roughness: 0.32 }), ear = mat('#070609', { roughness: 0.5 });
+  const root = pivot(scene, 0, 0, 0), body = pivot(root, 0, 0, 0);
+  const torso = mesh(new THREE.CapsuleGeometry(0.19, 0.5, 6, 14), coat, body, 0, 0.52, 0); torso.rotation.z = Math.PI / 2;
+  const head = pivot(body, 0.5, 0.74, 0);
+  mesh(new THREE.SphereGeometry(0.16, 18, 14), coat, head);
+  const snout = mesh(new THREE.CapsuleGeometry(0.075, 0.12, 4, 10), coat, head, 0.17, -0.05, 0); snout.rotation.z = Math.PI / 2;
+  mesh(new THREE.SphereGeometry(0.036, 10, 8), mat('#050505', { roughness: 0.15 }), head, 0.31, -0.04, 0);
+  for (const sz of [-1, 1]) {
+    const e = mesh(new THREE.BoxGeometry(0.035, 0.18, 0.11), ear, head, -0.01, -0.05, sz * 0.155); e.rotation.x = sz * 0.22;
+    mesh(new THREE.SphereGeometry(0.024, 10, 8), mat(PAL.brown, { roughness: 0.15 }), head, 0.12, 0.04, sz * 0.085);
+  }
+  const collar = mesh(new THREE.TorusGeometry(0.135, 0.03, 8, 22), mat(PAL.collar, { roughness: 0.5 }), body, 0.4, 0.66, 0);
+  collar.rotation.y = Math.PI / 2;
+  const tag = mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.012, 14), mat(PAL.brass, { roughness: 0.3, metalness: 0.7 }), body, 0.44, 0.5, 0);
+  tag.rotation.z = Math.PI / 2;
+  const leg = (x, z) => {
+    const p = pivot(body, x, 0.5, z);
+    mesh(new THREE.CylinderGeometry(0.058, 0.05, 0.45, 10), coat, p, 0, -0.225, 0);
+    const paw = mesh(new THREE.SphereGeometry(0.068, 10, 8), coat, p, 0.025, -0.45, 0); paw.scale.set(1.3, 0.6, 1);
+    return p;
+  };
+  const legs = { fl: leg(0.28, -0.11), fr: leg(0.28, 0.11), bl: leg(-0.27, -0.12), br: leg(-0.27, 0.12) };
+  const tailYaw = pivot(body, -0.48, 0.6, 0), tailPitch = pivot(tailYaw, 0, 0, 0);
+  tailPitch.rotation.z = 1.15;
+  mesh(new THREE.CylinderGeometry(0.02, 0.04, 0.44, 8), coat, tailPitch, 0, 0.22, 0);
+  return { root, body, head, tailYaw, ...legs, pose: { pitch: 0, dy: 0, dx: 0, front: 0, back: 0 } };
+}
+
+function buildItems3d(scene) {
+  const cup = pivot(scene, 0, 0, 0), sock = pivot(scene, 0, 0, 0), ball = pivot(scene, 0, 0, 0);
+  const white = mat(PAL.paper, { roughness: 0.3 });
+  const cupBody = pivot(cup, 0, 0, 0);
+  mesh(new THREE.CylinderGeometry(0.065, 0.055, 0.13, 18), white, cupBody, 0, 0.065, 0);
+  mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.005, 18), mat(PAL.brown, { roughness: 0.2 }), cupBody, 0, 0.128, 0);
+  const handle = mesh(new THREE.TorusGeometry(0.035, 0.012, 6, 12), white, cupBody, 0.075, 0.07, 0);
+  handle.rotation.x = Math.PI / 2; handle.rotation.y = Math.PI / 2;
+  const spill = mesh(new THREE.CircleGeometry(0.2, 20), mat(PAL.brown, { roughness: 0.1 }), cup, 0.18, 0.003, 0);
+  spill.rotation.x = -Math.PI / 2; spill.scale.set(1, 0.6, 1);
+  const grey = mat(PAL.grey, { roughness: 0.95 }), stripe = mat(PAL.collar, { roughness: 0.95 });
+  mesh(new THREE.BoxGeometry(0.26, 0.04, 0.1), grey, sock, -0.03, 0.02, 0);
+  mesh(new THREE.BoxGeometry(0.1, 0.04, 0.12), grey, sock, 0.1, 0.02, 0.03);
+  mesh(new THREE.BoxGeometry(0.03, 0.045, 0.105), stripe, sock, -0.12, 0.02, 0);
+  mesh(new THREE.BoxGeometry(0.03, 0.045, 0.105), stripe, sock, -0.07, 0.02, 0);
+  const ballMesh = mesh(new THREE.SphereGeometry(0.075, 16, 12), mat(PAL.ball, { roughness: 0.9 }), ball, 0, 0.075, 0);
+  return { cup, cupBody, spill, sock, ball, ballMesh };
+}
+
+function init3d() {
+  if (!window.THREE) return false;
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas: c3, antialias: true }); } catch (e) { return false; }
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(PAL.wall);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+
+  scene.add(new THREE.HemisphereLight(0xfff4e0, 0x6a4a2a, 0.5));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.75);
+  sun.position.set(-3, 8, 4); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+  Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 });
+  scene.add(sun);
+
+  const tex = c => { const t = new THREE.CanvasTexture(c); t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t; };
+  const floor = mesh(new THREE.PlaneGeometry(W, D), mat('#fff', { map: tex(FLOOR), roughness: 0.6 }), scene);
+  floor.rotation.x = -Math.PI / 2; floor.castShadow = false;
+  const rug = mesh(new THREE.PlaneGeometry(4.6, 2.6), mat('#fff', { map: tex(RUG), roughness: 1, transparent: true }), scene, 0, 0.004, 0);
+  rug.rotation.x = -Math.PI / 2; rug.castShadow = false;
+  const wallM = mat(PAL.wall, { roughness: 0.95 }), skirt = mat(PAL.paper, { roughness: 0.5 });
+  mesh(new THREE.BoxGeometry(W + 0.4, 1.6, 0.2), wallM, scene, 0, 0.8, -HD - 0.1);
+  mesh(new THREE.BoxGeometry(W, 0.12, 0.04), skirt, scene, 0, 0.06, -HD + 0.02);
+  for (const sx of [-1, 1]) {
+    mesh(new THREE.BoxGeometry(0.2, 0.5, D + 0.2), wallM, scene, sx * (HW + 0.1), 0.25, 0);
+    mesh(new THREE.BoxGeometry(0.04, 0.12, D), skirt, scene, sx * (HW - 0.02), 0.06, 0);
+  }
+
+  const glowC = document.createElement('canvas'); glowC.width = glowC.height = 64;
+  const gg = glowC.getContext('2d'), grad = gg.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, 'rgba(255,60,60,1)'); grad.addColorStop(1, 'rgba(255,40,40,0)');
+  gg.fillStyle = grad; gg.fillRect(0, 0, 64, 64);
+  const dot = pivot(scene, 0, 0, 0);
+  const core = new THREE.Mesh(new THREE.CircleGeometry(0.06, 20), new THREE.MeshBasicMaterial({ color: PAL.laser }));
+  const glow = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(glowC), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9 }));
+  for (const m of [core, glow]) { m.rotation.x = -Math.PI / 2; m.position.y = 0.007; dot.add(m); }
+  const light = new THREE.PointLight(0xff2020, 2.5, 1.8, 2); light.position.y = 0.1; dot.add(light);
+
+  T = { renderer, scene, camera, dot, dog: buildSpot3d(scene), it: buildItems3d(scene),
+        ray: new THREE.Raycaster(), plane: new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit: new THREE.Vector3() };
+  return true;
+}
+
+const view3d = {
+  toRoom(p) {
+    const v = new THREE.Vector2(p.x / innerWidth * 2 - 1, -(p.y / innerHeight) * 2 + 1);
+    T.ray.setFromCamera(v, T.camera);
+    return T.ray.ray.intersectPlane(T.plane, T.hit) ? { x: T.hit.x, z: T.hit.z } : null;
+  },
+};
+
+function resize3d() {
+  const w = innerWidth, h = innerHeight, f = Math.max(1, 1.55 / (w / h));
+  T.renderer.setPixelRatio(bit ? 1 / 5 : Math.min(devicePixelRatio || 1, 2));
+  T.renderer.setSize(w, h, false);
+  T.camera.aspect = w / h; T.camera.updateProjectionMatrix();
+  T.camera.position.set(0, 6.4 * f, 6.2 * f); T.camera.lookAt(0, 0, 0.35);
+  for (const m of mats) { m.flatShading = bit; m.needsUpdate = true; }
+}
+
+function draw3d(dt) {
+  const { dog, it } = T, s = spot, k = 1 - Math.exp(-14 * dt);
+  T.dot.position.set(laser.x, 0, laser.z);
+  dog.root.position.set(s.x, s.hop * 0.45, s.z);
+  dog.root.rotation.y = -s.h;
+  const P = { pitch: 0, dy: 0, dx: 0, front: 0, back: 0 };
+  if (s.state === 'crouch') Object.assign(P, { pitch: -0.28, dy: -0.12, front: 0.7 });
+  if (s.state === 'pounce') Object.assign(P, { pitch: 0.35 - s.ext * 0.6, front: 1.5 * s.ext, back: -0.7 * s.hop });
+  if (s.state === 'land') Object.assign(P, { pitch: -0.2 * s.ext, dy: -0.05 * s.ext, front: 1.0 * s.ext });
+  if (s.state === 'sit') Object.assign(P, { pitch: 0.5, dy: -0.14, dx: -0.12, front: -0.5, back: 1.3 });
+  for (const key in P) dog.pose[key] += (P[key] - dog.pose[key]) * k;
+  const q = dog.pose, trot = s.state === 'chase' ? Math.sin(s.gait) * 0.55 : 0;
+  dog.body.rotation.z = q.pitch;
+  dog.body.position.set(q.dx, q.dy, s.state === 'crouch' ? Math.sin(s.t * 32) * 0.035 : 0);
+  dog.fl.rotation.z = q.front + trot; dog.fr.rotation.z = q.front - trot;
+  dog.bl.rotation.z = q.back - trot; dog.br.rotation.z = q.back + trot;
+  dog.tailYaw.rotation.y = Math.sin(s.wag) * 0.6;
+
+  const byKind = Object.fromEntries(items.map(i => [i.kind, i]));
+  for (const kind of ['cup', 'sock', 'ball']) {
+    const i = byKind[kind], g = it[kind];
+    g.visible = !!i;
+    if (!i) continue;
+    g.position.set(i.x, 0, i.z); g.rotation.y = -i.rot;
+  }
+  if (byKind.cup) {
+    it.cupBody.rotation.z = byKind.cup.down ? -Math.PI / 2 : 0;
+    it.cupBody.position.y = byKind.cup.down ? 0.065 : 0;
+    it.spill.visible = byKind.cup.down;
+  }
+  if (byKind.ball) it.ballMesh.rotation.z = -byKind.ball.roll;
+  T.renderer.render(T.scene, T.camera);
+}
+
+// ---------- Game ----------
+const MODES = {
+  dodge: { time: 60, speed: t => 1 + t / 60 * 0.7 },
+  endless: { time: 0, speed: t => 1 + Math.min(t / 120, 1) * 0.6 },
+  lure: { time: 90, speed: () => 1 },
+};
+const ITEM_PTS = { cup: 30, sock: 10, ball: 20 };
+const ITEM_NAME = { cup: 'cup', sock: 'sock', ball: 'ball' };
+const G = { mode: null, running: false, paused: false, t: 0, lives: 3, catches: 0, streak: 0, best: 0, score: 0, knocked: {} };
+let spot = newSpot(), items = [], view = '2d', bit = false, pointer = null;
+const laser = { x: 1.5, z: 0 };
+
+function freeSpot(self) {
+  for (let n = 0; n < 40; n++) {
+    const x = (Math.random() * 2 - 1) * (HW - 0.6), z = (Math.random() * 2 - 1) * (HD - 0.6);
+    if (dist(x, z, spot.x, spot.z) > 2 && items.every(i => i === self || i.x === undefined || dist(x, z, i.x, i.z) > 1.2)) return { x, z };
+  }
+  return { x: -spot.x * 0.8, z: -spot.z * 0.8 };
+}
+function placeItem(i) { Object.assign(i, freeSpot(i), { down: false, vx: 0, vz: 0, timer: 0, rot: Math.random() * 6.28, roll: 0 }); }
+
+function stepItems(dt) {
+  const hx = spot.x + Math.cos(spot.h) * 0.5, hz = spot.z + Math.sin(spot.h) * 0.5;
+  for (const i of items) {
+    if (!i.down) {
+      if (dist(hx, hz, i.x, i.z) < 0.38 || dist(spot.x, spot.z, i.x, i.z) < 0.42) {
+        const v = i.kind === 'ball' ? 3.5 : 1.4;
+        Object.assign(i, { down: true, timer: 2.4, vx: Math.cos(spot.h) * v, vz: Math.sin(spot.h) * v });
+        if (i.kind !== 'ball') i.rot = spot.h;
+        G.score += ITEM_PTS[i.kind]; G.knocked[i.kind] = (G.knocked[i.kind] || 0) + 1;
+        toast(`+${ITEM_PTS[i.kind]} ${ITEM_NAME[i.kind]}`);
+      }
+      continue;
+    }
+    const fr = Math.exp(-(i.kind === 'ball' ? 0.8 : 4) * dt);
+    i.vx *= fr; i.vz *= fr; i.x += i.vx * dt; i.z += i.vz * dt;
+    i.roll += Math.hypot(i.vx, i.vz) * dt / 0.075;
+    if (i.kind === 'ball') i.rot = Math.atan2(i.vz, i.vx);
+    if (Math.abs(i.x) > HW - 0.1) { i.x = Math.sign(i.x) * (HW - 0.1); i.vx *= -0.6; }
+    if (Math.abs(i.z) > HD - 0.1) { i.z = Math.sign(i.z) * (HD - 0.1); i.vz *= -0.6; }
+    if ((i.timer -= dt) <= 0) placeItem(i);
+  }
+}
+
+let toastTimer = 0;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 900); }
+
+const PAW = '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"%s><ellipse cx="12" cy="16" rx="5.5" ry="4.5"/><circle cx="5.2" cy="10" r="2.4"/><circle cx="9.5" cy="5.6" r="2.4"/><circle cx="14.5" cy="5.6" r="2.4"/><circle cx="18.8" cy="10" r="2.4"/></svg>';
+const clock = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+let hudCache = '';
+function hud() {
+  let main = '', sub = '';
+  if (G.mode === 'dodge') {
+    main = clock(Math.ceil(MODES.dodge.time - G.t));
+    sub = `<span class="sr">${G.lives} lives left</span>` + [0, 1, 2].map(n => PAW.replace('%s', n < G.lives ? '' : ' class="gone"')).join('');
+  } else if (G.mode === 'endless') {
+    main = `${G.catches} ${G.catches === 1 ? 'catch' : 'catches'}`;
+    sub = `Dodging for ${Math.floor(G.streak)} s<br>Best ${Math.floor(G.best)} s`;
+  } else if (G.mode === 'lure') {
+    main = `${G.score} points`;
+    sub = `${clock(Math.ceil(MODES.lure.time - G.t))} left`;
+  }
+  if (main + sub === hudCache) return;
+  hudCache = main + sub; $('#hudMain').textContent = main; $('#hudSub').innerHTML = sub;
+}
+
+function update(dt) {
+  const M = MODES[G.mode];
+  if (G.paused) return;
+  if (G.running) G.t += dt;
+  const ev = stepSpot(spot, laser, dt, M ? M.speed(G.t) : 0.9);
+  if (!G.running) return;
+  if (G.mode === 'lure') stepItems(dt);
+  if (G.mode === 'endless') { G.streak += dt; G.best = Math.max(G.best, G.streak); }
+  if (ev === 'catch') {
+    if (G.mode === 'dodge') { G.lives--; toast(G.lives ? 'Spot got it!' : 'Got it again!'); }
+    if (G.mode === 'endless') { G.catches++; G.streak = 0; toast('Spot got it!'); }
+    if (G.mode === 'lure') toast('Caught it. Keep him moving');
+  }
+  if (G.mode === 'dodge' && G.lives <= 0) return end('lost');
+  if (M.time && G.t >= M.time) return end('time');
+}
+
+function show(id, on) { $(id).classList.toggle('on', on); }
+function start(mode) {
+  Object.assign(G, { mode, running: true, paused: false, t: 0, lives: 3, catches: 0, streak: 0, best: 0, score: 0, knocked: {} });
+  spot = newSpot(); hudCache = '';
+  items = mode === 'lure' ? ['cup', 'sock', 'ball'].map(kind => ({ kind })) : [];
+  items.forEach(placeItem);
+  show('#title', false); show('#over', false); show('#pause', false);
+  $('#hud').hidden = false; document.body.classList.add('playing');
+  document.activeElement && document.activeElement.blur();
+}
+function toTitle() {
+  Object.assign(G, { mode: null, running: false, paused: false }); items = [];
+  show('#pause', false); show('#over', false); show('#title', true);
+  $('#hud').hidden = true; document.body.classList.remove('playing');
+  $('.tag').focus();
+}
+function pause(on) {
+  if (!G.running) return;
+  G.paused = on; show('#pause', on); document.body.classList.toggle('playing', !on);
+  if (on) {
+    $('#pauseText').textContent = G.mode === 'endless'
+      ? `${G.catches} ${G.catches === 1 ? 'catch' : 'catches'} so far. Best dodge streak ${Math.floor(G.best)} seconds.`
+      : 'Spot is waiting for the dot to come back.';
+    $('#resume').focus();
+  }
+}
+function end(why) {
+  G.running = false; document.body.classList.remove('playing');
+  let title, text;
+  if (G.mode === 'dodge' && why === 'time') {
+    title = 'You kept it away';
+    text = `60 seconds with ${G.lives} ${G.lives === 1 ? 'life' : 'lives'} left. Spot is still looking for it.`;
+  } else if (G.mode === 'dodge') {
+    title = 'Spot got it';
+    text = `Three catches in ${Math.floor(G.t)} seconds. He looks very pleased with himself.`;
+  } else {
+    const n = k => G.knocked[k] || 0;
+    title = "Time's up";
+    text = `${G.score} points. Spot knocked over ${n('cup')} ${n('cup') === 1 ? 'cup' : 'cups'}, ${n('sock')} ${n('sock') === 1 ? 'sock' : 'socks'} and ${n('ball')} ${n('ball') === 1 ? 'ball' : 'balls'}.`;
+  }
+  $('#overTitle').textContent = title; $('#overText').textContent = text;
+  show('#over', true); $('#again').focus();
+}
+
+// ---------- Switches ----------
+function setView(v) {
+  if (v === '3d' && !T && !init3d()) { toast('3D needs WebGL, which is turned off in this browser'); return; }
+  view = v; document.body.classList.toggle('three', v === '3d');
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === v));
+  resize();
+}
+function setBit(on) {
+  bit = on; document.body.classList.toggle('bit', on);
+  document.querySelectorAll('[data-bit]').forEach(b => b.setAttribute('aria-pressed', (b.dataset.bit === '1') === on));
+  resize();
+}
+function resize() { resize2d(); if (T) resize3d(); }
+
+// ---------- Input ----------
+const keys = new Set();
+addEventListener('pointermove', e => { pointer = { x: e.clientX, y: e.clientY }; });
+addEventListener('keydown', e => {
+  if (e.key.startsWith('Arrow')) { keys.add(e.key); e.preventDefault(); }
+  if (e.key === 'v' || e.key === 'V') setView(view === '2d' ? '3d' : '2d');
+  if (e.key === 'b' || e.key === 'B') setBit(!bit);
+  if (e.key === 'Escape') pause(!G.paused);
+});
+addEventListener('keyup', e => keys.delete(e.key));
+addEventListener('blur', () => keys.clear());
+document.addEventListener('visibilitychange', () => { if (document.hidden && G.running && !G.paused) pause(true); });
+addEventListener('resize', resize);
+document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => start(b.dataset.mode)));
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+document.querySelectorAll('[data-bit]').forEach(b => b.addEventListener('click', () => setBit(b.dataset.bit === '1')));
+document.querySelectorAll('[data-act="title"]').forEach(b => b.addEventListener('click', toTitle));
+$('#resume').addEventListener('click', () => pause(false));
+$('#again').addEventListener('click', () => start(G.mode));
+
+function steerLaser(dt) {
+  if (keys.size) {
+    pointer = null;
+    const ax = keys.has('ArrowRight') - keys.has('ArrowLeft'), az = keys.has('ArrowDown') - keys.has('ArrowUp');
+    laser.x += ax * 3 * dt; laser.z += az * 3 * dt;
+  } else if (pointer) {
+    const p = (view === '3d' ? view3d : view2d).toRoom(pointer);
+    if (p) { laser.x = p.x; laser.z = p.z; }
+  }
+  laser.x = clamp(laser.x, -HW + 0.05, HW - 0.05);
+  laser.z = clamp(laser.z, -HD + 0.05, HD - 0.05);
+}
+
+// ---------- Self-check ----------
+(function selfCheck() {
+  const a = newSpot(); Object.assign(a, { x: 0, z: 0, lx: 3 });
+  stepSpot(a, { x: 3, z: 0 }, 0.1, 1);
+  console.assert(a.x > 0, 'Spot should move toward the dot');
+  const pounce = () => Object.assign(newSpot(), { state: 'pounce', t: POUNCE_T - 0.01, fx: 0, fz: 0, tx: 1, tz: 0, h: 0, x: 0.99, z: 0 });
+  console.assert(stepSpot(pounce(), { x: 1 + REACH, z: 0 }, 0.02, 1) === 'catch', 'pounce on the dot is a catch');
+  console.assert(stepSpot(pounce(), { x: 3, z: 2 }, 0.02, 1) === 'miss', 'pounce far from the dot is a miss');
+  view2d.layout(1200, 800);
+  const r = view2d.toRoom(view2d.toScreen(1.25, -0.5));
+  console.assert(Math.abs(r.x - 1.25) < 1e-9 && Math.abs(r.z + 0.5) < 1e-9, '2D mouse mapping round-trips');
+})();
+
+// ---------- Loop ----------
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!G.paused) steerLaser(dt);
+  update(dt);
+  hud();
+  if (view === '3d') draw3d(dt); else draw2d();
+  requestAnimationFrame(frame);
+}
+// read-only hook for the Playwright smoke test
+window.__spot = (tx = 0, tz = 0) => {
+  let px = view2d.toScreen(tx, tz);
+  if (view === '3d') { const v = new THREE.Vector3(tx, 0, tz).project(T.camera); px = { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight }; }
+  return { x: spot.x, z: spot.z, view, px, items: items.map(i => ({ x: i.x, z: i.z, down: i.down })) };
+};
+resize();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

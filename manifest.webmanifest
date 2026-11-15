@@ -1,0 +1,16 @@
+{
+  "name": "Spot-light HD",
+  "short_name": "Spot-light",
+  "description": "A realistic black lab chases your laser dot.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#14110e",
+  "theme_color": "#14110e",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "docs/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
