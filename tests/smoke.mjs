@@ -35,11 +35,12 @@ for (const room of ['living', 'garden', 'cabin']) {
   for (const mode of gpu || room === 'living' ? modes : ['dodge']) {
     log(room, mode);
     await page.click(`[data-mode="${mode}"]`);
-    const a = await state();
-    await wiggle();
-    const b = await state();
+    // distance travelled, sampled during the wiggle (he may finish a loop where he began)
+    let prev = await state(), travelled = 0;
+    for (let k = 0; k < 3; k++) { await wiggle(gpu ? 5 : 2); const cur = await state(); travelled += Math.hypot(cur.x - prev.x, cur.z - prev.z); prev = cur; }
+    const b = prev;
     if (b.mode !== mode || b.room !== room) problems.push(`${room}/${mode}: wrong state ${b.mode}/${b.room}`);
-    if (Math.hypot(b.x - a.x, b.z - a.z) < 0.05 && b.state !== 'sleep') problems.push(`${room}/${mode}: Spot did not move (${b.state})`);
+    if (travelled < 0.05 && b.state !== 'sleep') problems.push(`${room}/${mode}: Spot did not move (${b.state})`);
     await page.keyboard.press('Escape');
     if (mode !== 'relax' && !(await page.isVisible('#pause'))) problems.push(`${room}/${mode}: Esc did not pause`);
     if (await page.isVisible('#pause')) await page.click('#pause [data-act="title"]'); else await H('toTitle');
